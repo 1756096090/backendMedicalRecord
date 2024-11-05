@@ -12,20 +12,7 @@ type User struct {
     DNI             string             `bson:"dni"`
     Password        string             `bson:"password"`
     BirthDate       string             `bson:"birthDate"`
-    Role            UserRole           `bson:"role"`
-    Specialist      UserSpecialist     `bson:"specialist"`
+    RoleID          primitive.ObjectID `bson:"roleId"`            
+    SpecialistID    primitive.ObjectID `bson:"specialistId"`    
     HasAccess       bool               `bson:"hasAccess"`
-
-    
-}
-
-type UserRole struct {
-    Name        string   `bson:"name"`
-    Permissions []string `bson:"permissions"`
-}
-
-type UserSpecialist struct {
-    Specialization     string `bson:"specialization"`
-    Description        string `bson:"description"`
-    YearsOfExperience  int    `bson:"yearsOfExperience"`
 }

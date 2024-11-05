@@ -15,5 +15,9 @@ func SetupRoutes() *mux.Router {
 
     specialistRouter :=  router.PathPrefix("/specialist").Subrouter()
     SpecialistRoutes(specialistRouter)
+
+    patientRoutes := router.PathPrefix("/patient").Subrouter()
+    PatientRoutes(patientRoutes)
+
     return router
 }

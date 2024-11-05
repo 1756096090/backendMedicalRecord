@@ -59,6 +59,8 @@ func UpdateRole(roleID string, updatedRole models.Role) (*mongo.UpdateResult, er
 	return result, nil
 }
 
+
+
 func DeleteRole(roleID string) (*mongo.DeleteResult, error) {
 	roleCollection := config.DB.Collection("role")
 	objID, err := primitive.ObjectIDFromHex(roleID)
