@@ -61,7 +61,7 @@ func UpdateSpecialist(w http.ResponseWriter, r *http.Request) {
     }
 
     if result.ModifiedCount == 0 {
-        http.Error(w, "Specialist not found or no changes made", http.StatusNotFound)
+        http.Error(w, "No hay cambios", http.StatusNotFound)
         return
     }
 

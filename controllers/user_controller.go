@@ -21,7 +21,17 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
         http.Error(w, "Invalid request payload", http.StatusBadRequest)
         return
     }
-    
+
+    existingUser, err := repository.GetUserByDNIOrEmail(user.DNI, user.Email)
+    if err != nil {
+        http.Error(w, "Error checking DNI", http.StatusInternalServerError)
+        return
+    }
+    if existingUser != nil {
+        http.Error(w, "El DNI o el mail ya existen", http.StatusConflict)
+        return
+    }
+
     result, err := repository.CreateUser(user)
     if err != nil {
         http.Error(w, "Error creating user", http.StatusInternalServerError)
@@ -31,6 +41,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
     w.WriteHeader(http.StatusCreated)
     json.NewEncoder(w).Encode(result)
 }
+
 
 func GetUser(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
@@ -61,6 +72,16 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    existingUser, err := repository.GetUserByDNIOrEmail(user.DNI, user.Email)
+    if err != nil {
+        http.Error(w, "Error checkin", http.StatusInternalServerError)
+        return
+    }
+    if existingUser != nil && existingUser.ID.Hex() != userID {
+        http.Error(w, "El DNI o el Mail ya existe", http.StatusConflict)
+        return
+    }
+
     result, err := repository.UpdateUser(userID, user)
     if err != nil {
         http.Error(w, "Error updating user", http.StatusInternalServerError)
@@ -68,13 +89,12 @@ func UpdateUser(w http.ResponseWriter, r *http.Request) {
     }
 
     if result.ModifiedCount == 0 {
-        http.Error(w, "User not found or no changes made", http.StatusNotFound)
+        http.Error(w, "No ha realizado cambios", http.StatusNotFound)
         return
     }
 
     json.NewEncoder(w).Encode(result)
 }
-
 func DeleteUser(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
     userID := vars["id"]

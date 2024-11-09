@@ -61,6 +61,7 @@ func UpdateUser(userID string, updatedUser models.User) (*mongo.UpdateResult, er
 	return result, nil
 }
 
+
 func DeleteUser(userID string) (*mongo.DeleteResult, error) {
 	userCollection := config.DB.Collection("user")
 	objID, err := primitive.ObjectIDFromHex(userID)
@@ -119,4 +120,25 @@ func Login(email string, password string) (models.User, error) {
     }
 
     return user, nil
+}
+
+func GetUserByDNIOrEmail(dni string, email string) (*models.User, error) {
+    userCollection := config.DB.Collection("user")
+
+    var user models.User
+    filter := bson.M{"$or": []bson.M{
+        {"dni": dni},
+        {"email": email},
+    }}
+
+    err := userCollection.FindOne(context.Background(), filter).Decode(&user)
+    if err != nil {
+        if err == mongo.ErrNoDocuments {
+            return nil, nil
+        }
+        log.Println("Error retrieving user by DNI or email:", err)
+        return nil, err
+    }
+
+    return &user, nil
 }

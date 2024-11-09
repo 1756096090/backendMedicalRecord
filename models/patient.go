@@ -12,6 +12,7 @@ type Patient struct {
 	Gender                   bool               `bson:"gender"`
 	Concerning               string             `bson:"concerning"`
 	Mail                     string             `bson:"mail"`
+	DNI                      string             `bson:"dni"`
 	Phone                    string             `bson:"phone"`
 	Occupation               string             `bson:"occupation"`
 	Responsible              string             `bson:"responsible"`

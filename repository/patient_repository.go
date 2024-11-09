@@ -14,6 +14,7 @@ import (
 
 func CreatePatient(patient models.Patient) (*mongo.InsertOneResult, error) {
 	patientCollection := config.DB.Collection("patient")
+	log.Printf("Using collection: %s", patientCollection.Name())
 	result, err := patientCollection.InsertOne(context.Background(), patient)
 	if err != nil {
 		log.Println("Error creating patient:", err)
@@ -44,6 +45,8 @@ func GetPatientByID(patientID string) (*models.Patient, error) {
 }
 func UpdatePatient(patientID string, updatedPatient models.Patient) (*mongo.UpdateResult, error) {
 	patientCollection := config.DB.Collection("patient")
+	log.Printf("Using collection: %s", patientCollection.Name())
+
 	objID, err := primitive.ObjectIDFromHex(patientID)
 	if err != nil {
 		return nil, err
@@ -104,5 +107,28 @@ func GetAllPatients() ([]models.Patient, error) {
 
 	return patients, nil
 }
+
+
+func GetPatientByDNIOrEmail(dni string, email string) (*models.Patient, error) {
+    patientCollection := config.DB.Collection("patient")
+
+    filter := bson.M{"$or": []bson.M{
+        {"dni": dni},
+        {"email": email},
+    }}
+
+    var patient models.Patient
+    err := patientCollection.FindOne(context.Background(), filter).Decode(&patient)
+    if err != nil {
+        if err == mongo.ErrNoDocuments {
+            return nil, nil
+        }
+        return nil, err
+    }
+
+    return &patient, nil
+}
+
+
 
 
