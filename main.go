@@ -19,5 +19,5 @@ func main() {
     corsMethods := handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}) 
     corsHeaders := handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}) 
 
-    log.Fatal(http.ListenAndServe(":8080", handlers.CORS(corsOptions, corsMethods, corsHeaders)(router)))
+    log.Fatal(http.ListenAndServe(":8081", handlers.CORS(corsOptions, corsMethods, corsHeaders)(router)))
 }

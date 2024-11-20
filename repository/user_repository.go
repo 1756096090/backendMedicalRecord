@@ -142,3 +142,61 @@ func GetUserByDNIOrEmail(dni string, email string) (*models.User, error) {
 
     return &user, nil
 }
+
+
+
+
+func GetUsersAllInfo() ([]models.UserInfo, error) {
+    userCollection := config.DB.Collection("user")
+
+    pipeline := mongo.Pipeline{
+        {
+            {"$lookup", bson.D{
+                {"from", "role"}, 
+                {"localField", "roleId"},
+                {"foreignField", "_id"},
+                {"as", "role"},
+            }},
+        },
+        {
+            {Key: "$lookup", Value: bson.D{
+                {"from", "specialist"}, 
+                {"localField", "specialistId"},
+                {"foreignField", "_id"},
+                {"as", "specialist"},
+            }},
+        },
+        {
+            {"$unwind", "$role"}, 
+        },
+        {
+            {"$unwind", "$specialist"}, 
+        },
+    }
+
+    cursor, err := userCollection.Aggregate(context.Background(), pipeline)
+    if err != nil {
+        log.Println("Error getting users:", err)
+        return nil, err
+    }
+    defer cursor.Close(context.Background())
+
+    var users []models.UserInfo
+    for cursor.Next(context.Background()) {
+        var user models.UserInfo
+        if err := cursor.Decode(&user); err != nil {
+            log.Println("Error decoding user:", err)
+            return nil, err
+        }
+        users = append(users, user)
+    }
+
+    if err := cursor.Err(); err != nil {
+        log.Println("Cursor error:", err)
+        return nil, err
+    }
+
+    return users, nil
+}
+
+

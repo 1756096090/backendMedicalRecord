@@ -9,8 +9,8 @@ import (
 
 var DB *mongo.Database
 
-func ConnectDB() *mongo.Database {
-	clientOptions := options.Client().ApplyURI("mongodb+srv://user_test:Ismacs2003@firstproyectwebengineer.b6xlw.mongodb.net/?retryWrites=true&w=majority&appName=FirstProyectWebEngineering")
+func ConnectDB() *mongo.Database {clientOptions := options.Client().ApplyURI("mongodb+srv://user_test:Ismacs2003@firstproyectwebengineer.b6xlw.mongodb.net/?retryWrites=true&w=majority&appName=FirstProyectWebEngineering")
+	
 	client, err := mongo.Connect(context.Background(), clientOptions)
 	if err != nil {
 		log.Fatal(err)

@@ -61,6 +61,50 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(user)
 }
 
+
+
+func GetUserWithRoleAndSpecialty(w http.ResponseWriter, r *http.Request) {
+    vars := mux.Vars(r)
+    userID := vars["id"]
+
+    user, err := repository.GetUserByID(userID)
+    if err != nil {
+        http.Error(w, "Error fetching user", http.StatusInternalServerError)
+        return
+    }
+    if user == nil {
+        http.Error(w, "User not found", http.StatusNotFound)
+        return
+    }
+
+    role, err := repository.GetRoleByID(user.RoleID.Hex())
+    if err != nil {
+        http.Error(w, "Error fetching role", http.StatusInternalServerError)
+        return
+    }
+
+    specialty, err := repository.GetSpecialistByID(user.SpecialistID.Hex())
+    if err != nil {
+        http.Error(w, "Error fetching specialty", http.StatusInternalServerError)
+        return
+    }
+
+    response := struct {
+        User      models.User       `json:"user"`
+        Role      models.Role       `json:"role"`
+        Specialty models.Specialist `json:"specialty"`
+    }{
+        User:      *user,
+        Role:      *role,
+        Specialty: *specialty,
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    if err := json.NewEncoder(w).Encode(response); err != nil {
+        http.Error(w, "Error encoding response", http.StatusInternalServerError)
+    }
+}
+
 func UpdateUser(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
     userID := vars["id"]
@@ -122,6 +166,28 @@ func GetAllUsers(w http.ResponseWriter, r *http.Request) {
 
     json.NewEncoder(w).Encode(users)
 }
+
+
+
+func GetDoctors(w http.ResponseWriter, r *http.Request) {
+    users, err := repository.GetUsersAllInfo()
+    
+    if err != nil {
+        http.Error(w, "Error getting users", http.StatusInternalServerError)
+        return
+    }
+
+    var doctors []models.UserInfo
+    for _, user := range users {
+        if user.Role.Name == "Doctor" { 
+            doctors = append(doctors, user)
+        }
+    }
+
+    w.Header().Set("Content-Type", "application/json")
+    json.NewEncoder(w).Encode(doctors)
+}
+
 
 func Login(w http.ResponseWriter, r *http.Request) {
 	var user models.User
