@@ -19,8 +19,17 @@ func SetupRoutes() *mux.Router {
     scheduleRouter :=  router.PathPrefix("/schedule").Subrouter()
     ScheduleRoutes(scheduleRouter)
 
+    diagnosisRouter :=  router.PathPrefix("/diagnosis").Subrouter()
+    DiagnosisRoutes(diagnosisRouter)
+
     patientRoutes := router.PathPrefix("/patient").Subrouter()
     PatientRoutes(patientRoutes)
+
+    procedureRoutes := router.PathPrefix("/procedure").Subrouter()
+    ProcedureRoutes(procedureRoutes)
+
+    diagnosisProcedureRoutes := router.PathPrefix("/diagnosisProcedure").Subrouter()
+    DiagnosisProcedureRoutes(diagnosisProcedureRoutes)
 
     return router
 }
