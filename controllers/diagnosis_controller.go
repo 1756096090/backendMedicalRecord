@@ -43,6 +43,8 @@ func GetDiagnosis(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(diagnosis)
 }
 
+
+
 func UpdateDiagnosis(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r)
     diagnosisID := vars["id"]
