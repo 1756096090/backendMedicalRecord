@@ -158,7 +158,7 @@ func GetSchedulesByUserAndDate(userID string) ([]models.ScheduleDetail, error) {
 	pipeline := mongo.Pipeline{
 		{
 			{"$match", bson.D{
-				{"id_user", "673e5b3670412d1df3072a46"},
+				{"id_user", userID},
 				{"start_appointment", bson.M{
 					"$gte": startDate, // Filter for appointments after startDate
 					"$lt":  endDate,   // Filter for appointments before endDate
@@ -216,3 +216,67 @@ func GetSchedulesByUserAndDate(userID string) ([]models.ScheduleDetail, error) {
 
 	return schedules, nil
 }
+
+func GetSchedulesByPatientAndDate(patientID string) ([]models.ScheduleDetail, error) {
+	scheduleCollection := config.DB.Collection("schedule")
+
+	// Calculate date rang
+	
+	pipeline := mongo.Pipeline{
+		{
+			{"$match", bson.D{
+				{"id_patient", "673e5b3670412d1df3072a46"},
+				
+
+			}},
+		},
+		{
+			{"$addFields", bson.D{
+				{"id_user", bson.D{{"$toObjectId", "$id_user"}}},
+				{"id_patient", bson.D{{"$toObjectId", "$id_patient"}}},
+			}},
+		},
+		{
+			{"$lookup", bson.D{
+				{"from", "user"},
+				{"localField", "id_user"},
+				{"foreignField", "_id"},
+				{"as", "user"},
+			}},
+		},
+		{
+			{"$lookup", bson.D{
+				{"from", "patient"},
+				{"localField", "id_patient"},
+				{"foreignField", "_id"},
+				{"as", "patient"},
+			}},
+		},
+		{
+			{"$unwind", "$user"},
+		},
+		{
+			{"$unwind", "$patient"},
+		},
+	}
+	
+	
+
+	// Execute aggregation
+	cursor, err := scheduleCollection.Aggregate(context.Background(), pipeline)
+	if err != nil {
+		log.Printf("Error executing aggregation: %v", err)
+		return nil, fmt.Errorf("failed to execute aggregation: %w", err)
+	}
+	defer cursor.Close(context.Background())
+
+	// Decode results
+	var schedules []models.ScheduleDetail
+	if err := cursor.All(context.Background(), &schedules); err != nil {
+		log.Printf("Error decoding schedules: %v", err)
+		return nil, fmt.Errorf("failed to decode schedules: %w", err)
+	}
+
+	return schedules, nil
+}
+

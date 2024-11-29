@@ -2,13 +2,12 @@ package models
 
 import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
-	"time"
 )
 
 type Patient struct {
 	ID                       primitive.ObjectID `bson:"_id,omitempty"`
 	Name                     string             `bson:"name"`
-	BirthDate                time.Time          `bson:"birthDate"`
+	BirthDate               string        `bson:"birthDate"`
 	Gender                   bool               `bson:"gender"`
 	Concerning               string             `bson:"concerning"`
 	Mail                     string             `bson:"mail"`

@@ -1,16 +1,16 @@
 package models
 
 import (
-	"time"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"time"
 )
 
 type DiagnosisProcedure struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty"`
-	IDPatient   string             `bson:"id_patient"`
-	CodeDiagnosis string             `bson:"code_diagnosis"`
+	ID                 primitive.ObjectID `bson:"_id,omitempty"`
+	IDPatient          string             `bson:"id_patient"`
+	CodeDiagnosis      string             `bson:"code_diagnosis"`
 	CodeUnderDiagnosis string             `bson:"code_under_diagnosis"`
-	Procedures  []ProcedureDetails `bson:"procedures"`
+	Procedures         []ProcedureDetails `bson:"procedures"`
 }
 
 type ProcedureDetails struct {
