@@ -5,7 +5,9 @@ import (
 	"backendMedicalRecord/repository"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"regexp"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -118,259 +120,9 @@ func GetAllDiagnosisProceduresByID(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(diagnosisProcedures)
 }
 
-
-func generateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
-    var requestBody struct {
-        IDProcedure string `json:"IDProcedure"`
-        IDPatient   string `json:"IDPatient"`
-    }
-
-    var (
-        isTimeType              bool
-        totalDays               int
-        numberOfTimeProcedures  int
-        diagnosisProceduresArray []models.DiagnosisProcedure
-        currentProcedure        models.Procedure
-        averageAge              float64
-        averageGender           float64
-        successfulTreatments    int64
-        isSuccessfullSimilarPatients bool
-    )
-
-    if err := json.NewDecoder(r.Body).Decode(&requestBody); err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
-        return
-    }
-
-    if requestBody.IDProcedure == "" {
-        http.Error(w, "IDProcedure is required", http.StatusBadRequest)
-        return
-    }
-
-    diagnosisProcedures, err := repository.GetAllDiagnosisProcedures()
-    if err != nil {
-        http.Error(w, "Error fetching diagnosis procedures", http.StatusInternalServerError)
-        return
-    }
-
-    procedures, err := repository.GetAllProcedures()
-    if err != nil {
-        http.Error(w, "Error fetching procedures", http.StatusInternalServerError)
-        return
-    }
-
-    patients, err := repository.GetAllPatients()
-    if err != nil {
-        http.Error(w, "Error fetching patients", http.StatusInternalServerError)
-        return
-    }
-
-    patientsMap := make(map[string]models.Patient)
-    for _, patient := range patients {
-        patientsMap[string(patient.ID.Hex())] = patient
-    }
-
-    // Find the specified procedure
-    for _, pro := range procedures {
-        if pro.ID.Hex() == requestBody.IDProcedure {
-            isTimeType = pro.IsTimeType
-            currentProcedure = pro
-            break
-        }
-    }
-
-    currentPatient, exists := patientsMap[requestBody.IDPatient]
-    if !exists {
-        http.Error(w, "Patient not found", http.StatusNotFound)
-        return
-    }
-
-    diagnosisProceduresMap := make(map[string][]models.DiagnosisProcedure)
-    for _, diagProc := range diagnosisProcedures {
-        id := diagProc.ID.Hex() 
-        if _, exists := diagnosisProceduresMap[id]; exists {
-            diagnosisProceduresMap[id] = append(diagnosisProceduresMap[id], diagProc)
-        } else {
-            diagnosisProceduresMap[id] = []models.DiagnosisProcedure{diagProc}
-        }
-    }
-
-    var patientMoreCommon struct {
-        TotalDays int
-        Count int
-        IsSuccessful bool
-    }
-
-    patientMoreCommon:= make(map[string] patientMoreCommon)
-
-    agePatient, err: = calculateAge(currentPatient.BirthDate)
-    if err!= nil {
-        http.Error(w, "Error calculating age", http.StatusInternalServerError)
-        return
-    }
-
-
-    for id, diagnosisProcedures := range diagnosisProceduresMap {
-        patient, exists := patientsMap[id]
-        if !exists {
-            continue 
-        }
-
-
-        patientMoreCommon[id].Count += checkPatientSimilarity(currentPatient, patient)
-        if age< agePatient && age >agePatient-5 {
-            patientMoreCommon[patient.ID.Hex()]++
-        }
-
-        
-        
-        for _, diagProc := range diagnosisProcedures {
-            for _, procedure := range diagProc.Procedures {
-                if isTimeType {
-                    if procedure.StartAt != nil && procedure.EndAt != nil && procedure.EndAt.After(*procedure.StartAt) {
-                        duration := procedure.EndAt.Sub(*procedure.StartAt)
-                        totalDays += int(duration.Hours() / 24)
-                        patientMoreCommon[id].TotalDays = int(duration.Hours() / 24)
-
-                        diagnosisProceduresArray = append(diagnosisProceduresArray, diagProc)
-                        age, err := calculateAge(patient.BirthDate)
-                        if err != nil {
-                            http.Error(w, "Error calculating age", http.StatusInternalServerError)
-                            return
-                        }
-
-
-                        
-
-                        averageAge += float64(age)
-                        if patient.Gender {
-                            averageGender++
-                        }
-                        numberOfTimeProcedures++
-                    }
-                    } else {
-                        if procedure.IsCompleted {
-                            diagnosisProceduresArray = append(diagnosisProceduresArray, diagProc)
-                            successfulTreatments++
-                            patientMoreCommon.IsSuccessful = true
-                        age, err := calculateAge(patient.BirthDate)
-                        if err != nil {
-                            http.Error(w, "Error calculating age", http.StatusInternalServerError)
-                            return
-                        }
-                        averageAge += float64(age)
-                        if patient.Gender {
-                            averageGender++
-                        }
-                        numberOfTimeProcedures++
-                    }else {
-                        patientMoreCommon.IsSuccessful = false
-                    }
-                }
-            }
-        }
-    }
-
-    diagnosisCount := make(map[string]int)
-    for _, diagProc := range diagnosisProceduresArray {
-        diagnosisCount[diagProc.CodeUnderDiagnosis]++
-    }
-
-    var mostCommon string
-    var highestCount int
-    for diagnosis, count := range diagnosisCount {
-        if count > highestCount {
-            mostCommon = diagnosis
-            highestCount = count
-        }
-    }
-
-    var ArrayPatientMoreCommon struct{
-        patient   models.Patient  `json:"patient"`
-        TotalDays int     `json:"totalDays"`
-        Count    int     `json:"count"`
-        IsSuccessful bool `json:"isSuccessful"`
-    }
-
-    var mostCommonPatient int
-    var highestCountPatient int
-    for idPatient, count := range patientMoreCommon {
-        if patient > highestCount {
-            mostCommonPatient = patientsMap[patient]
-            highestCount = count
-        }
-
-        if 
-    }
-
-    averageTime = totalDays / numberOfTimeProcedures
-    var arrayPatientMoreCommon [] ArrayPatientMoreCommon
-
-    for patient, count:= range patientMoreCommon{
-        if count == highestCount {
-            arrayPatientMoreCommon = append(arrayPatientMoreCommon, ArrayPatientMoreCommon{
-                patient:   patientsMap[patient],
-                TotalDays: count.TotalDays,
-                Count:    count.Count,
-                IsSuccessful: count.IsSuccessful,
-            })
-        }
-
-        if isTimeType{
-            if arrayPatientMoreCommon[idPatient].TotalDays <= averageTime {
-                successfulTreatments++
-            }
-        }
-
-    }
-
-    fmt.Printf("The patient with the most common age is: %s with %d cases.\n", mostCommonPatient.Name, highestCount)
-
-
-    fmt.Printf("The most common diagnosis is: %s with %d cases.\n", mostCommon, highestCount)
-    
-
-
-
-    if numberOfTimeProcedures > 0 {
-        averageAge /= float64(numberOfTimeProcedures)
-        averageGender /= float64(numberOfTimeProcedures)
-    }
-
-    response := struct {
-        DiagnosisProcedures []models.DiagnosisProcedure `json:"diagnosisProcedures"`
-        IsTimeType          bool                        `json:"isTimeType"`
-        AverageTime         int                         `json:"averageTime"`
-        AverageAge          float64                     `json:"averageAge"`
-        AverageGender       float64                     `json:"averageGender"`
-    ArrayPatientMoreCommon     ArrayPatientMoreCommon   `json:"ArrayPatientMoreCommon"`
-    SuccessfulTreatments     int64                       `json:"successfulTreatments"`
-    
-    }{
-        DiagnosisProcedures: diagnosisProceduresArray,
-        IsTimeType:          isTimeType,
-        AverageTime:         averageTime,
-        AverageAge:          averageAge,
-        AverageGender:       averageGender,
-        SimilarPatient:      arrayPatientMoreCommon,
-        SuccessfulTreatments: successfulTreatments,
-    }
-
-    w.Header().Set("Content-Type", "application/json")
-    if err := json.NewEncoder(w).Encode(response); err != nil {
-        http.Error(w, "Error encoding response", http.StatusInternalServerError)
-        return
-    }
-}
-
-
-func calculateAge(birthDateStr string) (int, error) {
+func calculateAge(birthDate *time.Time) (int, error) {
 	const layout = "2006-01-02" // Formato ISO 8601: YYYY-MM-DD
 
-	birthDate, err := time.Parse(layout, birthDateStr)
-	if err != nil {
-		return 0, fmt.Errorf("invalid date format: %v", err)
-	}
 
 	now := time.Now()
 	age := now.Year() - birthDate.Year()
@@ -382,75 +134,314 @@ func calculateAge(birthDateStr string) (int, error) {
 	return age, nil
 }
 
-
-
-
 func checkPatientSimilarity(currentPatient, patient models.Patient) int {
-    similarityCount := 0
+	similarityCount := 0
 
-    if patient.Gender == currentPatient.Gender {
-        similarityCount++
-    }
+	if patient.Gender == currentPatient.Gender {
+		similarityCount++
+	}
 
-    similarityChecks := []func() bool{
-        patient.HasAllergies,
-        patient.HasBloodGlucose,
-        patient.HasHighBloodPressure,
-        patient.HasDiabetes,
-        patient.HasSmoking,
-        patient.HasAsthma,
-        patient.HasEpilepsy,
-        patient.HasLungCancer,
-        patient.HasHepatitis,
-        patient.HasHeartDisease,
-        patient.HasKidneyDisease,
-        patient.HasThyroidDisease,
-        patient.HasCancer,
-        patient.HasHormonalDisorders,
-        patient.HasRenalDisease,
-        patient.HasObesity,
-        patient.HasDiabeticRetinopathy,
-        patient.HasCerebralPalsy,
-        patient.HasCongenitalAnomalies,
-        patient.HasMentalDisorders,
-        patient.HasNeurologicalDisorders,
-        patient.HasPhysicalDisabilities,
-        patient.HasLearningDisabilities,
-        patient.HasDevelopmentalDisabilities,
-    }
+	// Create maps of boolean conditions for each patient
+	patientConditions := map[string]bool{
+		"HasAllergies":             patient.HasAllergies,
+		"HasBloodGlucose":          patient.HasBloodGlucose,
+		"HasDiabetes":              patient.HasDiabetes,
+		"HasHeartDisease":          patient.HasHeartDisease,
+		"HasNeurologicalDisorders": patient.HasNeurologicalDisorders,
+		"HasBloodPressure":         patient.HasBloodPressure,
+		"HasEndocrineDisorders":    patient.HasEndocrineDisorders,
+	}
 
-    currentPatientChecks := []func() bool{
-        currentPatient.HasAllergies,
-        currentPatient.HasBloodGlucose,
-        currentPatient.HasHighBloodPressure,
-        currentPatient.HasDiabetes,
-        currentPatient.HasSmoking,
-        currentPatient.HasAsthma,
-        currentPatient.HasEpilepsy,
-        currentPatient.HasLungCancer,
-        currentPatient.HasHepatitis,
-        currentPatient.HasHeartDisease,
-        currentPatient.HasKidneyDisease,
-        currentPatient.HasThyroidDisease,
-        currentPatient.HasCancer,
-        currentPatient.HasHormonalDisorders,
-        currentPatient.HasRenalDisease,
-        currentPatient.HasObesity,
-        currentPatient.HasDiabeticRetinopathy,
-        currentPatient.HasCerebralPalsy,
-        currentPatient.HasCongenitalAnomalies,
-        currentPatient.HasMentalDisorders,
-        currentPatient.HasNeurologicalDisorders,
-        currentPatient.HasPhysicalDisabilities,
-        currentPatient.HasLearningDisabilities,
-        currentPatient.HasDevelopmentalDisabilities,
-    }
+	currentPatientConditions := map[string]bool{
+		"HasAllergies":             currentPatient.HasAllergies,
+		"HasBloodGlucose":          currentPatient.HasBloodGlucose,
+		"HasDiabetes":              currentPatient.HasDiabetes,
+		"HasHeartDisease":          currentPatient.HasHeartDisease,
+		"HasNeurologicalDisorders": currentPatient.HasNeurologicalDisorders,
+		"HasBloodPressure":         currentPatient.HasBloodPressure,
+		"HasEndocrineDisorders":    currentPatient.HasEndocrineDisorders,
+	}
 
-    for i := 0; i < len(similarityChecks); i++ {
-        if similarityChecks[i]() == currentPatientChecks[i]() {
-            similarityCount++
-        }
-    }
+	// Compare conditions
+	for condition, value := range patientConditions {
+		if value == currentPatientConditions[condition] {
+			similarityCount++
+		}
+	}
 
-    return similarityCount
+	return similarityCount
+}
+
+// models
+var requestBodyReport struct {
+	IDProcedure string `json:"IDProcedure"`
+	IDPatient   string `json:"IDPatient"`
+}
+
+type MedicalData struct {
+	DiagnosisProcedures []models.DiagnosisProcedure
+	Procedures          []models.Procedure
+	Patients            []models.Patient
+}
+
+func fetchMedicalData(w http.ResponseWriter) (*MedicalData, error) {
+	diagnosisProcedures, err := repository.GetAllDiagnosisProcedures()
+	if err != nil {
+		http.Error(w, "Error fetching diagnosis procedures", http.StatusInternalServerError)
+		return nil, fmt.Errorf("failed to fetch diagnosis procedures: %w", err)
+	}
+
+	procedures, err := repository.GetAllProcedures()
+	if err != nil {
+		http.Error(w, "Error fetching procedures", http.StatusInternalServerError)
+		return nil, fmt.Errorf("failed to fetch procedures: %w", err)
+	}
+
+	patients, err := repository.GetAllPatients()
+	if err != nil {
+		http.Error(w, "Error fetching patients", http.StatusInternalServerError)
+		return nil, fmt.Errorf("failed to fetch patients: %w", err)
+	}
+
+	return &MedicalData{
+		DiagnosisProcedures: diagnosisProcedures,
+		Procedures:          procedures,
+		Patients:            patients,
+	}, nil
+}
+
+func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
+
+	var (
+		isTimeType               bool
+		totalDays                int
+		numberOfTimeProcedures   int
+		diagnosisProceduresArray []models.DiagnosisProcedure
+		averageAge               float64
+		averageTime              float64
+		averageGender            float64
+		successfulTreatments     int64
+	)
+
+	if err := json.NewDecoder(r.Body).Decode(&requestBodyReport); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	medicalData, err := fetchMedicalData(w)
+	diagnosisProcedures := medicalData.DiagnosisProcedures
+	patients := medicalData.Patients
+
+	patientsMap := make(map[string]models.Patient)
+	for _, patient := range patients {
+		patientsMap[string(patient.ID.Hex())] = patient
+	}
+
+	diagnosisProceduresMap := make(map[string][]models.DiagnosisProcedure)
+	for _, diagProc := range diagnosisProcedures {
+		id := diagProc.IDPatient
+		if _, exists := diagnosisProceduresMap[id]; exists {
+			diagnosisProceduresMap[id] = append(diagnosisProceduresMap[id], diagProc)
+		} else {
+			diagnosisProceduresMap[id] = []models.DiagnosisProcedure{diagProc}
+		}
+	}
+
+	currentPatient, exists := patientsMap[requestBodyReport.IDPatient]
+	if !exists {
+		http.Error(w, "Patient not found", http.StatusNotFound)
+		return
+	}
+
+	type PatientMoreCommon struct {
+		TotalDays    int
+		Count        int
+		IsSuccessful bool
+		diagnosis    string
+	}
+
+	patientMoreCommon := make(map[string]PatientMoreCommon)
+
+	agePatient, err := calculateAge(currentPatient.BirthDate)
+	if err != nil {
+		http.Error(w, "Error calculating age", http.StatusInternalServerError)
+		return
+	}
+
+	for id, diagnosisProcedures := range diagnosisProceduresMap {
+
+		var durationProcedure int
+		if id == currentPatient.ID.Hex(){
+			continue
+		}
+		patient, exists := patientsMap[id]
+		if !exists {
+			continue
+		}
+		age, err := calculateAge(patient.BirthDate)
+
+		for i, diagProc := range diagnosisProcedures {
+			index := id+"-"+diagProc.ID.Hex()+"-"+string(i)
+			currentData := patientMoreCommon[index]
+			fmt.Println("Key generated:", id+"-"+diagProc.ID.Hex()+"-",i) 
+			log.Printf("info", id+"-"+diagProc.ID.Hex())
+			for _, procedure := range diagProc.Procedures {
+				if isTimeType {
+					if procedure.StartAt != nil && procedure.EndAt != nil && procedure.EndAt.After(*procedure.StartAt) {
+
+						duration := procedure.EndAt.Sub(*procedure.StartAt)
+						durationProcedure = int(duration.Hours() / 24)
+						totalDays += durationProcedure
+
+						currentData.Count += checkPatientSimilarity(currentPatient, patient)
+						if agePatient-5 < age && age < agePatient {
+							currentData.Count++
+						}
+
+						currentData.TotalDays = int(duration.Hours() / 24)
+
+						diagnosisProceduresArray = append(diagnosisProceduresArray, diagProc)
+						if err != nil {
+							http.Error(w, "Error calculating age", http.StatusInternalServerError)
+							return
+						}
+
+						averageAge += float64(age)
+						if patient.Gender {
+							averageGender++
+						}
+						numberOfTimeProcedures++
+					}
+				} else {
+					if procedure.IsCompleted {
+
+						currentData.Count += checkPatientSimilarity(currentPatient, patient)
+						if agePatient-5 < age && age < agePatient  +5{
+							currentData.Count++
+						}
+
+						diagnosisProceduresArray = append(diagnosisProceduresArray, diagProc)
+						successfulTreatments++
+						currentData.IsSuccessful = true
+						age, err := calculateAge(patient.BirthDate)
+						if err != nil {
+							http.Error(w, "Error calculating age", http.StatusInternalServerError)
+							return
+						}
+						averageAge += float64(age)
+						if patient.Gender {
+							averageGender++
+						}
+						numberOfTimeProcedures++
+					} else {
+						currentData.IsSuccessful = false
+					}
+				}
+			}
+
+			patientMoreCommon[index] = currentData
+		}
+	}
+
+	diagnosisCount := make(map[string]int)
+	for _, diagProc := range diagnosisProceduresArray {
+		diagnosisCount[diagProc.CodeUnderDiagnosis]++
+	}
+
+	var mostCommon string
+	var highestCount int
+	for diagnosis, count := range diagnosisCount {
+		if count > highestCount {
+			mostCommon = diagnosis
+			highestCount = count
+		}
+	}
+
+	type PatientMoreCommonModel struct {
+		Patient      *models.Patient
+		TotalDays    int
+		Count        int
+		IsSuccessful bool
+	}
+
+	var highestCountPatient int
+	for _, stats := range patientMoreCommon {
+		if stats.Count > highestCount {
+			highestCountPatient = stats.Count
+		}
+	}
+
+	averageTime = float64(totalDays) / float64(numberOfTimeProcedures)
+	var arrayPatientMoreCommon []PatientMoreCommonModel
+
+	for idPatientDiag, stats := range patientMoreCommon {
+		var patientPtr *models.Patient
+		idPatient, err := extractPatientID(idPatientDiag)
+		if err != nil {
+			http.Error(w, "Error extracting patient ID", http.StatusInternalServerError)
+			return
+		}
+
+		if patient, exists := patientsMap[idPatient]; exists {
+			patientPtr = &patient
+			if stats.Count == highestCountPatient {
+
+				arrayPatientMoreCommon = append(arrayPatientMoreCommon, PatientMoreCommonModel{
+					Patient:      patientPtr,
+					TotalDays:    stats.TotalDays,
+					Count:        stats.Count,
+					IsSuccessful: stats.IsSuccessful,
+				})
+			}
+
+			if isTimeType {
+				if float64(stats.TotalDays) <= averageTime {
+					successfulTreatments++
+				}
+			}
+		}
+
+	}
+
+	fmt.Printf("The most common diagnosis is: cases.\n", mostCommon, averageAge)
+
+	if numberOfTimeProcedures > 0 {
+		averageAge /= float64(numberOfTimeProcedures)
+		averageGender /= float64(numberOfTimeProcedures)
+	}
+
+	response := struct {
+		DiagnosisProcedures  []models.DiagnosisProcedure `json:"diagnosisProcedures"`
+		IsTimeType           bool                        `json:"isTimeType"`
+		AverageTime          float64                     `json:"averageTime"`
+		AverageAge           float64                     `json:"averageAge"`
+		AverageGender        float64                     `json:"averageGender"`
+		SimilarPatients      []PatientMoreCommonModel    `json:"arrayPatientMoreCommon"`
+		SuccessfulTreatments int64                       `json:"successfulTreatments"`
+	}{
+		DiagnosisProcedures:  diagnosisProceduresArray,
+		IsTimeType:           isTimeType,
+		AverageTime:          averageTime,
+		AverageAge:           averageAge,
+		AverageGender:        averageGender,
+		SimilarPatients:      arrayPatientMoreCommon,
+		SuccessfulTreatments: successfulTreatments,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
+		return
+	}
+}
+
+func extractPatientID(combinedID string) (string, error) {
+	r := regexp.MustCompile(`^(.+?)-`)
+
+	matches := r.FindStringSubmatch(combinedID)
+	if len(matches) < 2 {
+		return "", fmt.Errorf("invalid ID format: %s", combinedID)
+	}
+
+	return matches[1], nil
 }

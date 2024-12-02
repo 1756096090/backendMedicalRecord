@@ -45,10 +45,8 @@ func GetScheduleByID(scheduleID string) (*models.Schedule, error) {
 }
 func UpdateSchedule(scheduleID string, updatedSchedule models.Schedule) (*mongo.UpdateResult, error) {
 	scheduleCollection := config.DB.Collection("schedule")
-	objID, err := primitive.ObjectIDFromHex(scheduleID)
-	if err != nil {
-		return nil, err
-	}
+	objID := scheduleID
+
 
 	filter := bson.M{"_id": objID}
 	update := bson.M{"$set": updatedSchedule}
@@ -153,16 +151,13 @@ func GetSchedulesByUserAndDate(userID string) ([]models.ScheduleDetail, error) {
 	now := time.Now().UTC()
 	startDate := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	endDate := startDate.AddDate(0, 1, 0)
-
+	log.Print("Getting schedules", startDate,endDate, userID)
 	
 	pipeline := mongo.Pipeline{
 		{
 			{"$match", bson.D{
 				{"id_user", userID},
-				{"start_appointment", bson.M{
-					"$gte": startDate, // Filter for appointments after startDate
-					"$lt":  endDate,   // Filter for appointments before endDate
-				}},
+
 				
 
 			}},
@@ -225,7 +220,7 @@ func GetSchedulesByPatientAndDate(patientID string) ([]models.ScheduleDetail, er
 	pipeline := mongo.Pipeline{
 		{
 			{"$match", bson.D{
-				{"id_patient", "673e5b3670412d1df3072a46"},
+				{"id_patient", patientID},
 				
 
 			}},

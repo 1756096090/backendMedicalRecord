@@ -58,6 +58,7 @@ func UpdateSchedule(w http.ResponseWriter, r *http.Request) {
 
     result, err := repository.UpdateSchedule(scheduleID, schedule)
     if err != nil {
+        
         http.Error(w, "Error updating schedule", http.StatusInternalServerError)
         return
     }

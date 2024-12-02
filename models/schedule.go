@@ -9,9 +9,9 @@ type Schedule struct {
 	Date             time.Time  `bson:"date"`
 	IDUser           string     `bson:"id_user"`
 	IDPatient        string     `bson:"id_patient"`
-	StartAppointment string  `bson:"start_appointment"`
-	EndAppointment   string  `bson:"end_appointment"`
-	StartOriginal    *string `bson:"start_original_date,omitempty"`
+	StartAppointment time.Time  `bson:"start_appointment"`
+	EndAppointment   time.Time  `bson:"end_appointment"`
+	StartOriginal    *time.Time `bson:"start_original_date,omitempty"`
 	Text             string     `bson:"text"`
 }
 

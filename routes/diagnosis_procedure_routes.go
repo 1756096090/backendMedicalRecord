@@ -14,4 +14,5 @@ func DiagnosisProcedureRoutes(router *mux.Router) {
     router.HandleFunc("/{id}", controllers.UpdateDiagnosisProcedure).Methods("PUT")  
     router.HandleFunc("/{id}", controllers.DeleteDiagnosisProcedure).Methods("DELETE")  
     router.HandleFunc("/by-patient", controllers.GetAllDiagnosisProceduresByID).Methods("POST") 	  
+    router.HandleFunc("/report", controllers.GenerateReportsOfProcedures).Methods("POST") 	  
 }
