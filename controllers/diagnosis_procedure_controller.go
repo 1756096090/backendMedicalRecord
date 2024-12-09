@@ -208,7 +208,7 @@ func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
 		averageAge               float64
 		averageGender            float64
 		successfulTreatments     int64
-		averageAppointmen        float64
+		averageAppointment       float64
 	)
 
 	if err := json.NewDecoder(r.Body).Decode(&requestBodyReport); err != nil {
@@ -245,7 +245,7 @@ func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, procedure := range procedures {
-		if procedure.ID.Hex() == requestBodyReport.IDProcedure{
+		if procedure.ID.Hex() == requestBodyReport.IDProcedure {
 			isTimeType = procedure.IsTimeType
 			break
 		}
@@ -280,10 +280,10 @@ func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
 
 		age, err := calculateAge(patient.BirthDate)
 
-		if err!= nil {
-            http.Error(w, "Error calculating age", http.StatusInternalServerError)
-            return
-        }
+		if err != nil {
+			http.Error(w, "Error calculating age", http.StatusInternalServerError)
+			return
+		}
 
 		for i, diagProc := range diagnosisProcedures {
 			index := id + "-" + diagProc.ID.Hex() + "-" + string(i)
@@ -291,21 +291,21 @@ func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Key generated:", id+"-"+diagProc.ID.Hex()+"-", i)
 			log.Println("info", id+"-"+diagProc.ID.Hex())
 			for _, procedure := range diagProc.Procedures {
-				if (procedure.IDProcedure == requestBodyReport.IDProcedure ){
+				if procedure.IDProcedure == requestBodyReport.IDProcedure {
 					currentData.hasProcedure = true
 					if isTimeType {
 						if procedure.StartAt != nil && procedure.EndAt != nil && procedure.EndAt.After(*procedure.StartAt) {
 							duration := procedure.EndAt.Sub(*procedure.StartAt)
 							durationProcedure = int(duration.Hours() / 24)
 							totalDays += durationProcedure
-	
+
 							currentData.Count += checkPatientSimilarity(currentPatient, patient)
 							if agePatient-5 < age && age < agePatient+5 {
 								currentData.Count++
 							}
-	
+
 							currentData.TotalDays = int(duration.Hours() / 24)
-	
+
 							diagnosisProceduresArray = append(diagnosisProceduresArray, diagProc)
 
 							averageAge += float64(age)
@@ -315,33 +315,33 @@ func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
 							totalProcedureCount++
 						}
 					} else {
-						if procedure.IsCompleted {
-	
-							currentData.Count += checkPatientSimilarity(currentPatient, patient)
-							if agePatient-5 < age && age < agePatient+5 {
-								currentData.Count++
-							}
-	
-							diagnosisProceduresArray = append(diagnosisProceduresArray, diagProc)
-							successfulTreatments++
-							currentData.IsSuccessful = true
-							age, err := calculateAge(patient.BirthDate)
-							if err != nil {
-								http.Error(w, "Error calculating age", http.StatusInternalServerError)
-								return
-							}
-							averageAge += float64(age)
-							
-							if patient.Gender { //Male
-								averageGender++
-							}
-							totalProcedureCount++
-						} else {
+
+						currentData.Count += checkPatientSimilarity(currentPatient, patient)
+						if agePatient-5 < age && age < agePatient+5 {
+							currentData.Count++
+						}
+
+						diagnosisProceduresArray = append(diagnosisProceduresArray, diagProc)
+						currentData.IsSuccessful = true
+						age, err := calculateAge(patient.BirthDate)
+						if err != nil {
+							http.Error(w, "Error calculating age", http.StatusInternalServerError)
+							return
+						}
+						averageAge += float64(age)
+
+						if patient.Gender { //Male
+							averageGender++
+						}
+						totalProcedureCount++
+						if !procedure.IsCompleted {
 							currentData.IsSuccessful = false
+						} else {
+							successfulTreatments++
 						}
 					}
 				}
-				
+
 			}
 
 			patientProcedures[index] = currentData
@@ -383,7 +383,7 @@ func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
 	for patientKey, patientStats := range patientProcedures {
 		patientID, err := extractPatientID(patientKey)
 
-		if !patientStats.hasProcedure{
+		if !patientStats.hasProcedure {
 			continue
 		}
 
@@ -410,16 +410,16 @@ func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
 			successfulTreatments++
 		}
 
-		patientSchedules, found := schedulesMap[patientKey]
-		if !found {
+		patientSchedules, exist := schedulesMap[patientID]
+		if !exist {
 			continue
 		}
 
 		for _, schedule := range patientSchedules {
 			if schedule.StartOriginal == nil {
-				continue 
+				continue
 			}
-		
+
 			if schedule.StartAppointment.After(*schedule.StartOriginal) {
 				delay := schedule.StartAppointment.Sub(*schedule.StartOriginal)
 				if delay.Hours() > 240 { // 10 days = 240 hours
@@ -433,9 +433,9 @@ func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
 	//Calculate the total number of age and gender
 
 	if totalProcedureCount > 0 {
-		averageAge /= float64(totalProcedureCount) 
+		averageAge /= float64(totalProcedureCount)
 		averageGender /= float64(totalProcedureCount) / 100
-		averageAppointmen = float64(appointmentKeeping) / float64(totalProcedureCount) * 100
+		averageAppointment = (float64(totalProcedureCount) - float64(appointmentKeeping)) / float64(totalProcedureCount) * 100
 	}
 
 	response := struct {
@@ -444,7 +444,7 @@ func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
 		AverageProcedureTime float64                  `json:"AverageProcedureTime"`
 		AveragePatientAge    float64                  `json:"AveragePatientAge"`
 		AveragePatientGender float64                  `json:"AveragePatientGender"`
-		AverageAppointmen    float64                  `json:"AverageAppointmen"`
+		AverageAppointment   float64                  `json:"AverageAppointmen"`
 		SimilarPatients      []PatientProcedureSumary `json:"SimilarPatients"`
 		SuccessfulTreatments int64                    `json:"SuccessfulTreatments"`
 		TotalProcedureCount  int                      `json:"TotalProcedureCount"`
@@ -457,7 +457,7 @@ func GenerateReportsOfProcedures(w http.ResponseWriter, r *http.Request) {
 		SimilarPatients:      commonPatients,
 		SuccessfulTreatments: successfulTreatments,
 		TotalProcedureCount:  totalProcedureCount,
-		AverageAppointmen:    averageAppointmen,
+		AverageAppointment:   averageAppointment,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -493,10 +493,10 @@ func fetchMedicalData(w http.ResponseWriter) (*MedicalData, error) {
 	}
 
 	procedures, err = repository.GetAllProcedures()
-	if err!= nil {
-        http.Error(w, "Error fetching procedures", http.StatusInternalServerError)
-        return nil, fmt.Errorf("failed to fetch procedures: %w", err)
-    }
+	if err != nil {
+		http.Error(w, "Error fetching procedures", http.StatusInternalServerError)
+		return nil, fmt.Errorf("failed to fetch procedures: %w", err)
+	}
 
 	return &MedicalData{
 		DiagnosisProcedures: diagnosisProcedures,
