@@ -3,12 +3,23 @@ package controllers
 import (
     "encoding/json"
     "net/http"
+    "io"
+    "log"
+    "bytes"
     "backendMedicalRecord/models"
     "backendMedicalRecord/repository"
 	"github.com/gorilla/mux"
 )
 
 func CreateDiagnosis(w http.ResponseWriter, r *http.Request) {
+    body, err := io.ReadAll(io.TeeReader(r.Body, &bytes.Buffer{}))
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+		return
+	}
+
+	// Imprimir el cuerpo para depuración
+	log.Printf("Request body: %s", string(body))
     var diagnosis models.Diagnosis
     if err := json.NewDecoder(r.Body).Decode(&diagnosis); err != nil {
         http.Error(w, "Invalid request payload", http.StatusBadRequest)
